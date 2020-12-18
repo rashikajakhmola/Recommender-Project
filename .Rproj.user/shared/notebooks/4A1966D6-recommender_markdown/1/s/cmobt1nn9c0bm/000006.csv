@@ -1,0 +1,3 @@
+"0","retail %>% "
+"0","  filter(grepl(""C"", retail$InvoiceNo)) %>% "
+"0","  summarise(Total = n())"

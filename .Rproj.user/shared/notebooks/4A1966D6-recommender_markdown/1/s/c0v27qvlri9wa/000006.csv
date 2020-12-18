@@ -1,0 +1,8 @@
+"0","retail %>%  "
+"0","  filter(grepl(paste(stc, collapse=""|""), StockCode))  %>% "
+"0","  group_by(StockCode, Description) %>% "
+"0","  summarise(count =n()) %>%"
+"0","  arrange(desc(count)) %>% "
+"0","  ungroup()"
+"2","`summarise()` regrouping output by 'StockCode' (override with `.groups` argument)
+"

@@ -1,0 +1,4 @@
+"0","retail <- retail %>% "
+"0","    mutate(InNo_Desc = paste(InvoiceNo, Description, sep = ' ')) "
+"0","    retail <- retail[!duplicated(retail$InNo_Desc), ] %>% "
+"0","    select(-InNo_Desc)"

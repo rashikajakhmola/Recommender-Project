@@ -1,0 +1,3 @@
+"0","retail <- read_excel(""Online Retail.xlsx"", "
+"0","                     trim_ws = TRUE)"
+"0",""

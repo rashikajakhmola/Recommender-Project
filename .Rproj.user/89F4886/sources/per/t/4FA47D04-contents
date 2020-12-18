@@ -1,0 +1,537 @@
+---
+title: "Recommender"
+output:
+  pdf_document: default
+  html_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = T)
+```
+
+I have tried to build a Product recommendation algorithm. I followed Diego Usai's article on towardsdatascience.com which can be found here <https://towardsdatascience.com/clean-a-complex-dataset-for-modelling-with-recommendation-algorithms-c977f7ba28b1>
+
+This data set contains transactions occurring between 01/Dec/2010 and 09/Dec/2011 for a UK-based and registered online retail company. The company sells mainly unique all-occasion gifts and many of their customers are wholesalers.
+
+## Importing libraries
+
+```{r, echo=T}
+install.packages("data.table")
+install.packages("readxl")
+install.packages("tidyverse")
+install.packages("lubridate")
+install.packages("skimr")
+install.packages("knitr")
+install.packages("treemap")
+install.packages("installr")
+install.packages("recommenderlab")
+
+# 
+# library(installr)
+# 
+# updateR()
+
+#Getting Libraries
+library(data.table)
+library(readxl)
+library(tidyverse)
+library(lubridate)
+library(skimr)
+library(knitr)
+library(treemap)
+library(recommenderlab)
+
+```
+
+## Importing raw data file
+
+use read excel function and remove white space
+
+```{r, echo=T}
+retail <- read_excel("Online Retail.xlsx", 
+                     trim_ws = TRUE)
+
+```
+
+Inspect the data using skim() function
+
+```{r, echo=T}
+retail %>% skim()
+
+```
+
+## Cleaning the data \^.\^
+
+Using the filter function
+
+```{r, echo=T}
+# a <- c(1,2,3,4) %>% as.data.frame()
+# b <- c(T,T,F,T)
+# a %>% filter(b)
+```
+
+Using grepl which generates TRUE/FALSE vector for each row by matching with a string, like Italy below
+
+```{r, echo=T}
+grepl("Italy", retail$Country) %>% table()
+```
+
+### Using filter an grepl to remove rows that have a cancellation
+
+Check how many rows have a cancellation using summarise() function
+
+```{r, echo=T}
+retail %>% 
+  filter(grepl("C", retail$InvoiceNo)) %>% 
+  summarise(Total = n())
+```
+
+Now remove the rows that have a cancellation
+
+```{r, echo=T}
+retail  <- retail %>% 
+  filter(!grepl("C", retail$InvoiceNo))
+```
+
+Making a table and using group_by function
+
+```{r,echo=T}
+# a <- c("Ant","Bat","Cow","Pig","Pig","Genda","Genda")
+# b <- c(1,1,1,1,2,1,1)
+# tbl <- cbind(a,b) %>% as.data.frame()
+# colnames(tbl) <- c("animal","price")
+# tbl %>% group_by(price) %>% summarise(count=n())
+# tbl %>% group_by(animal) %>% summarise(count=n())
+
+```
+
+Group by 2 columns at once and get the count
+
+```{r, echo=TRUE}
+# tbl %>% group_by(animal,price) %>% summarise(count=n())
+# tbl %>% group_by(animal,price) %>% summarise(count=n()) %>% arrange(desc(count)) 
+# tbl %>% group_by(animal,price) %>% summarise(count=n()) %>% arrange(desc(count)) %>% ungroup()
+```
+
+#### Using group_by to get quantities less than or equal to 0 and remove such rows
+
+We group by description to see the reason for non positive quantities. Also group by unit price to check if there was a reason or were these just "adjustment codes"
+
+```{r,echo=TRUE}
+retail %>% 
+  filter(Quantity <= 0) %>%
+  group_by(Description, UnitPrice) %>%
+  summarise(count =n()) %>%
+  arrange(desc(count)) %>%
+  ungroup()
+```
+
+Remove the rows that have non positive quantities
+
+```{r,echo=TRUE}
+retail  <- retail %>% 
+  filter(Quantity > 0)
+```
+
+#### Working with product codes
+
+```{r,echo=TRUE}
+retail$StockCode
+```
+
+Evidently, the stock codes are numbers, so blog writer checked for weird stock codes that are not numbers
+
+```{r,echo=TRUE}
+stc <- c('AMAZONFEE', 'BANK CHARGES', 'C2', 'DCGSSBOY',     'DCGSSGIRL', 'DOT', 'gift_0001_', 'PADS', 'POST')
+
+```
+
+Make a vector of all weird stock codes and concatenate them into a string using paste()
+
+```{r,echo=TRUE}
+paste(stc, collapse="|")
+```
+
+Group by stock code and description to see what the deal is with these weird stock codes
+
+```{r,echo=TRUE}
+retail %>%  
+  filter(grepl(paste(stc, collapse="|"), StockCode))  %>% 
+  group_by(StockCode, Description) %>% 
+  summarise(count =n()) %>%
+  arrange(desc(count)) %>% 
+  ungroup()
+```
+
+Since these are less than 2000, a small number, these can be removed
+
+```{r,echo=TRUE}
+retail <- filter(retail, 
+                 !grepl(paste(stc, collapse="|"), StockCode))
+
+```
+
+#### Working with the %in% operator
+
+Make a new variable fav and assign it Pig. Now check if fav is in animal column of table
+
+```{r,echo=TRUE}
+# tbl
+# fav <- "Pig"
+# fav %in% tbl$animal
+```
+
+Next, use the in operator the other way round. Is animal column of table in fav?
+
+```{r,echo=TRUE}
+# tbl$animal %in% fav
+```
+
+#### Working with is.na function
+
+This function returns true of a value is NA and false otherwise
+
+```{r,echo=TRUE}
+# a <- c(1,2,3,4,5,NA,6)
+# a %>% is.na
+```
+
+#### Use %in% and is.na to remove weird descriptions and NA description rows
+
+Make a vector of all weird descriptions
+
+```{r,echo=TRUE}
+descr <- c( "check", "check?", "?", "??", "damaged", "found", 
+            "adjustment", "Amazon", "AMAZON", "amazon adjust", 
+            "Amazon Adjustment", "amazon sales", "Found", "FOUND",
+            "found box", "Found by jackie ","Found in w/hse","dotcom", 
+            "dotcom adjust", "allocate stock for dotcom orders ta", "FBA", "Dotcomgiftshop Gift Voucher £100.00", "on cargo order",
+            "wrongly sold (22719) barcode", "wrongly marked 23343",
+            "dotcomstock", "rcvd be air temp fix for dotcom sit", 
+            "Manual", "John Lewis", "had been put aside", 
+            "for online retail orders", "taig adjust", "amazon", 
+            "incorrectly credited C550456 see 47", "returned", 
+            "wrongly coded 20713", "came coded as 20713", 
+            "add stock to allocate online orders", "Adjust bad debt", 
+            "alan hodge cant mamage this section", "website fixed",
+            "did  a credit  and did not tick ret", "michel oops",
+            "incorrectly credited C550456 see 47", "mailout", "test",
+            "Sale error",  "Lighthouse Trading zero invc incorr", "SAMPLES",
+            "Marked as 23343", "wrongly coded 23343","Adjustment", 
+            "rcvd be air temp fix for dotcom sit", "Had been put aside." )
+
+```
+
+Remove all these rows
+
+```{r,echo=TRUE}
+retail <- retail %>% 
+  filter(!(Description %in% descr))
+```
+
+Now check for NA descriptions
+
+```{r,echo=TRUE}
+sum(is.na(retail$Description))
+
+```
+
+Only 584 rows, can be removed
+
+```{r,echo=TRUE}
+retail <- retail %>% 
+  filter(!is.na(Description))
+```
+
+So, there were 7 columns, We have cleaned InvoiceNumber, , StockCode, Description. Now we come to CustomerId
+
+```{r,echo=TRUE}
+retail$CustomerID %>% skim()
+```
+
+There are a significant number of NAs here, 1.3 lakh, so we will leave them as it is
+
+Check for number of unique Invoice numbers, since customer ids are so many missing
+
+```{r,echo=TRUE}
+sapply(retail[ ,c('InvoiceNo','CustomerID')], 
+               function(x) length(unique(x)))
+
+```
+
+#### Changing data types of columns
+
+```{r,echo=TRUE}
+retail <- retail %>%
+  mutate(Description = as.factor(Description)) %>%
+  mutate(Country = as.factor(Country)) %>% 
+  mutate(InvoiceNo = as.numeric(InvoiceNo)) %>% 
+  mutate(Date = as.Date(InvoiceDate)) %>% 
+  mutate(Time = as.factor(format(InvoiceDate,"%H:%M:%S")))
+
+```
+
+## Exploring the data
+
+Checking the most popular items
+
+```{r,echo=TRUE}
+retail %>% 
+  group_by(Description) %>% 
+  summarize(count = n()) %>% 
+  top_n(10, wt = count) %>%
+  arrange(desc(count)) %>% 
+  ggplot(aes(x = reorder(Description, count), y = count))+
+  geom_bar(stat = "identity", fill = "royalblue", colour = "blue") +
+  labs(x = "", y = "Top 10 Best Sellers", title = "Most Ordered Products") +
+  coord_flip() +
+  theme_grey(base_size = 12)
+```
+
+Checking the percentage that top 10 items constitute
+
+```{r,echo=TRUE}
+retail %>% 
+  group_by(Description) %>% 
+  summarize(count = n()) %>% 
+  mutate(pct=(count/sum(count))*100) %>% 
+  arrange(desc(pct)) %>% 
+  ungroup() %>% 
+  top_n(10, wt=pct)
+
+```
+
+Checking at what time of the day people most buy the products
+
+```{r,echo=TRUE}
+retail %>% 
+  ggplot(aes(hour(hms(Time)))) + 
+  geom_histogram(stat = "count",fill = "#E69F00", colour = "red") +
+  labs(x = "Hour of Day", y = "") +
+  theme_grey(base_size = 12)
+
+```
+
+What day of the week people buy more often?
+
+```{r,echo=TRUE}
+retail %>% 
+  ggplot(aes(wday(Date, 
+                  week_start = getOption("lubridate.week.start", 1)))) + 
+  geom_histogram(stat = "count" , fill = "forest green", colour = "dark green") +
+  labs(x = "Day of Week", y = "") +
+  scale_x_continuous(breaks = c(1,2,3,4,5,6,7),
+                     labels = c("Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun")) +
+  theme_grey(base_size = 14)
+```
+
+How many items each customer buy?
+
+```{r,echo=TRUE}
+retail %>% 
+  group_by(InvoiceNo) %>% 
+  summarise(n = mean(Quantity)) %>%
+  ggplot(aes(x=n)) +
+  geom_histogram(bins = 100000,fill = "purple",colour = "black") + 
+  coord_cartesian(xlim=c(0,100)) +
+  scale_x_continuous(breaks=seq(0,100,10)) +
+  labs(x = "Average Number of Items per Purchase", y = "") +
+  theme_grey(base_size = 14)
+```
+
+Average value per order
+
+```{r,echo=TRUE}
+retail %>% 
+  mutate(Value = UnitPrice * Quantity) %>% 
+  group_by(InvoiceNo) %>% 
+  summarise(n = mean(Value)) %>%
+  ggplot(aes(x=n)) +
+  geom_histogram(bins = 200000, fill="firebrick3", colour = "sandybrown") + 
+  coord_cartesian(xlim=c(0,100)) +
+  scale_x_continuous(breaks=seq(0,100,10)) +
+  labs(x = "Average Value per Purchase", y = "") + 
+  theme_grey(base_size = 14)
+
+```
+
+## Applying various product recommendation models
+
+Make a column joining invoice no and description and remove duplicate rows
+
+```{r, echo=TRUE}
+retail <- retail %>% 
+    mutate(InNo_Desc = paste(InvoiceNo, Description, sep = ' ')) 
+    retail <- retail[!duplicated(retail$InNo_Desc), ] %>% 
+    select(-InNo_Desc)
+```
+
+Create a ratings matrix
+
+```{r,echo=TRUE}
+ratings_matrix <- retail %>%
+
+  select(InvoiceNo, Description) %>% 
+
+  mutate(value = 1) %>%
+
+  spread(Description, value, fill = 0) %>%
+  select(-InvoiceNo) %>%
+
+  as.matrix() %>%
+
+  as("binaryRatingMatrix")
+```
+
+Setting the evaluation scheme: 5-fold cross validation
+
+```{r,echo=TRUE}
+scheme <- ratings_matrix %>% 
+  evaluationScheme(method = "cross",
+                   k      = 5, 
+                   train  = 0.8,  
+                   given  = -1)
+scheme
+```
+
+Create a list of algorithms
+
+```{r,echo=TRUE}
+algorithms <- list(
+  "association rules" = list(name  = "AR", 
+                        param = list(supp = 0.01, conf = 0.01)),
+  "random items"      = list(name  = "RANDOM",  param = NULL),
+  "popular items"     = list(name  = "POPULAR", param = NULL),
+  "item-based CF"     = list(name  = "IBCF", param = list(k = 5)),
+  "user-based CF"     = list(name  = "UBCF", 
+                        param = list(method = "Cosine", nn = 500))
+                   )
+algorithms
+```
+
+Estimate the models using evaluate() function
+
+```{r,echo=TRUE}
+results <- recommenderlab::evaluate(scheme, 
+                                    algorithms, 
+                                    type  = "topNList", 
+                                    n     = c(1, 3, 5, 10, 15, 20)
+                                    )
+```
+
+```{r,echo=TRUE}
+results
+```
+
+## Visualizing the results
+
+Pull all confusion matrix information for one model in a list
+
+```{r,echo=TRUE}
+tmp <- results$`user-based CF` %>%
+  getConfusionMatrix()  %>%  
+  as.list() 
+```
+
+Average of 5 cross-validation rounds, add a column for number of recommendations, and select only needed columns
+
+```{r,echo=TRUE}
+  as.data.frame( Reduce("+",tmp) / length(tmp)) %>% 
+  mutate(n = c(1, 3, 5, 10, 15, 20)) %>%
+  select('n', 'precision', 'recall', 'TPR', 'FPR')
+
+```
+
+```{r,echo=TRUE}
+avg_conf_matr <- function(results) {
+  tmp <- results %>%
+    getConfusionMatrix()  %>%  
+    as.list() 
+    as.data.frame(Reduce("+",tmp) / length(tmp)) %>% 
+    mutate(n = c(1, 3, 5, 10, 15, 20)) %>%
+    select('n', 'precision', 'recall', 'TPR', 'FPR') 
+}
+
+```
+
+Use map() function to get all results in a tidy format
+
+```{r,echo=TRUE}
+results_tbl <- results %>%
+  map(avg_conf_matr) %>% enframe() %>%  unnest()
+
+results_tbl
+```
+
+### Plotting the ROC curve
+
+```{r,echo=TRUE}
+results_tbl %>%
+  ggplot(aes(FPR, TPR, 
+             colour = fct_reorder2(as.factor(name), 
+                      FPR, TPR))) +
+  geom_line() +
+  geom_label(aes(label = n))  +
+  labs(title = "ROC curves", colour = "Model") +
+  theme_grey(base_size = 14)
+```
+
+### Plotting the Precision-Recall Curve
+
+```{r,echo=TRUE}
+results_tbl %>%
+  ggplot(aes(recall, precision, 
+             colour = fct_reorder2(as.factor(name),  
+                      precision, recall))) +
+  geom_line() +
+  geom_label(aes(label = n))  +
+  labs(title = "Precision-Recall curves", colour = "Model") +
+  theme_grey(base_size = 14)
+```
+
+## Predictions for a new user
+
+Finally, we generate predictions for a new user. First create a random customer order.
+
+```{r,echo=TRUE}
+customer_order <- c("GREEN REGENCY TEACUP AND SAUCER",
+                     "SET OF 3 BUTTERFLY COOKIE CUTTERS",
+                     "JAM MAKING SET WITH JARS",
+                     "SET OF TEA COFFEE SUGAR TINS PANTRY",
+                     "SET OF 4 PANTRY JELLY MOULDS")
+```
+
+Put this order in a format that recommenderlab accepts.
+
+```{r,echo=TRUE}
+new_order_rat_matrx <- retail %>% 
+select(Description) %>% 
+  unique() %>%   mutate(value = as.numeric(Description %in% customer_order)) %>% 
+  spread(key = Description, value = value) %>% 
+  as.matrix() %>% 
+  as("binaryRatingMatrix")
+
+```
+
+Now create a recommender, with the best method found above, i.e., Item Based Collaborative Filtering
+
+```{r,echo=TRUE}
+recomm <- Recommender(getData(scheme, 'train'), 
+                       method = "IBCF",  
+                       param = list(k = 5))
+recomm
+```
+
+Create a list of top 10 recommendations
+
+```{r,echo=TRUE}
+pred <- predict(recomm, 
+                newdata = new_order_rat_matrx, 
+                n       = 10)
+```
+
+Inspect the suggested items as a list
+
+```{r,echo=TRUE}
+as(pred, 'list')
+```

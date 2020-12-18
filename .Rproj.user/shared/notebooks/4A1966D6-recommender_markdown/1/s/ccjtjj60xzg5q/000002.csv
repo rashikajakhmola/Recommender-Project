@@ -1,0 +1,3 @@
+"0","retail <- filter(retail, "
+"0","                 !grepl(paste(stc, collapse=""|""), StockCode))"
+"0",""

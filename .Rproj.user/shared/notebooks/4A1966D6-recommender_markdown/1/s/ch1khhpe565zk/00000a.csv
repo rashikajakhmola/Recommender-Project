@@ -1,0 +1,7 @@
+"0","a <- c(""Ant"",""Bat"",""Cow"",""Pig"",""Pig"",""Genda"",""Genda"")"
+"0","b <- c(1,1,1,1,2,1,1)"
+"0","tbl <- cbind(a,b) %>% as.data.frame()"
+"0","colnames(tbl) <- c(""animal"",""price"")"
+"0","tbl %>% group_by(price) %>% summarise(count=n())"
+"2","`summarise()` ungrouping output (override with `.groups` argument)
+"

@@ -1,0 +1,2 @@
+"0","retail  <- retail %>% "
+"0","  filter(!grepl(""C"", retail$InvoiceNo))"

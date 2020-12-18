@@ -1,0 +1,7 @@
+"0","retail <- retail %>%"
+"0","  mutate(Description = as.factor(Description)) %>%"
+"0","  mutate(Country = as.factor(Country)) %>% "
+"0","  mutate(InvoiceNo = as.numeric(InvoiceNo)) %>% "
+"0","  mutate(Date = as.Date(InvoiceDate)) %>% "
+"0","  mutate(Time = as.factor(format(InvoiceDate,""%H:%M:%S"")))"
+"0",""

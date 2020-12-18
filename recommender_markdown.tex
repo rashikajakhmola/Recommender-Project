@@ -1,0 +1,471 @@
+% Options for packages loaded elsewhere
+\PassOptionsToPackage{unicode}{hyperref}
+\PassOptionsToPackage{hyphens}{url}
+%
+\documentclass[
+]{article}
+\usepackage{lmodern}
+\usepackage{amsmath}
+\usepackage{ifxetex,ifluatex}
+\ifnum 0\ifxetex 1\fi\ifluatex 1\fi=0 % if pdftex
+  \usepackage[T1]{fontenc}
+  \usepackage[utf8]{inputenc}
+  \usepackage{textcomp} % provide euro and other symbols
+  \usepackage{amssymb}
+\else % if luatex or xetex
+  \usepackage{unicode-math}
+  \defaultfontfeatures{Scale=MatchLowercase}
+  \defaultfontfeatures[\rmfamily]{Ligatures=TeX,Scale=1}
+\fi
+% Use upquote if available, for straight quotes in verbatim environments
+\IfFileExists{upquote.sty}{\usepackage{upquote}}{}
+\IfFileExists{microtype.sty}{% use microtype if available
+  \usepackage[]{microtype}
+  \UseMicrotypeSet[protrusion]{basicmath} % disable protrusion for tt fonts
+}{}
+\makeatletter
+\@ifundefined{KOMAClassName}{% if non-KOMA class
+  \IfFileExists{parskip.sty}{%
+    \usepackage{parskip}
+  }{% else
+    \setlength{\parindent}{0pt}
+    \setlength{\parskip}{6pt plus 2pt minus 1pt}}
+}{% if KOMA class
+  \KOMAoptions{parskip=half}}
+\makeatother
+\usepackage{xcolor}
+\IfFileExists{xurl.sty}{\usepackage{xurl}}{} % add URL line breaks if available
+\IfFileExists{bookmark.sty}{\usepackage{bookmark}}{\usepackage{hyperref}}
+\hypersetup{
+  pdftitle={Recommender},
+  hidelinks,
+  pdfcreator={LaTeX via pandoc}}
+\urlstyle{same} % disable monospaced font for URLs
+\usepackage[margin=1in]{geometry}
+\usepackage{longtable,booktabs}
+\usepackage{calc} % for calculating minipage widths
+% Correct order of tables after \paragraph or \subparagraph
+\usepackage{etoolbox}
+\makeatletter
+\patchcmd\longtable{\par}{\if@noskipsec\mbox{}\fi\par}{}{}
+\makeatother
+% Allow footnotes in longtable head/foot
+\IfFileExists{footnotehyper.sty}{\usepackage{footnotehyper}}{\usepackage{footnote}}
+\makesavenoteenv{longtable}
+\usepackage{graphicx}
+\makeatletter
+\def\maxwidth{\ifdim\Gin@nat@width>\linewidth\linewidth\else\Gin@nat@width\fi}
+\def\maxheight{\ifdim\Gin@nat@height>\textheight\textheight\else\Gin@nat@height\fi}
+\makeatother
+% Scale images if necessary, so that they will not overflow the page
+% margins by default, and it is still possible to overwrite the defaults
+% using explicit options in \includegraphics[width, height, ...]{}
+\setkeys{Gin}{width=\maxwidth,height=\maxheight,keepaspectratio}
+% Set default figure placement to htbp
+\makeatletter
+\def\fps@figure{htbp}
+\makeatother
+\setlength{\emergencystretch}{3em} % prevent overfull lines
+\providecommand{\tightlist}{%
+  \setlength{\itemsep}{0pt}\setlength{\parskip}{0pt}}
+\setcounter{secnumdepth}{-\maxdimen} % remove section numbering
+\ifluatex
+  \usepackage{selnolig}  % disable illegal ligatures
+\fi
+
+\title{Recommender}
+\author{}
+\date{\vspace{-2.5em}}
+
+\begin{document}
+\maketitle
+
+\hypertarget{importing-libraries}{%
+\subsection{Importing libraries}\label{importing-libraries}}
+
+\begin{verbatim}
+## -- Attaching packages --------------------------------------- tidyverse 1.3.0 --
+\end{verbatim}
+
+\begin{verbatim}
+## v ggplot2 3.3.2     v purrr   0.3.4
+## v tibble  3.0.4     v dplyr   1.0.2
+## v tidyr   1.1.2     v stringr 1.4.0
+## v readr   1.4.0     v forcats 0.5.0
+\end{verbatim}
+
+\begin{verbatim}
+## -- Conflicts ------------------------------------------ tidyverse_conflicts() --
+## x dplyr::between()   masks data.table::between()
+## x dplyr::filter()    masks stats::filter()
+## x dplyr::first()     masks data.table::first()
+## x dplyr::lag()       masks stats::lag()
+## x dplyr::last()      masks data.table::last()
+## x purrr::transpose() masks data.table::transpose()
+\end{verbatim}
+
+\begin{verbatim}
+## 
+## Attaching package: 'lubridate'
+\end{verbatim}
+
+\begin{verbatim}
+## The following objects are masked from 'package:data.table':
+## 
+##     hour, isoweek, mday, minute, month, quarter, second, wday, week,
+##     yday, year
+\end{verbatim}
+
+\begin{verbatim}
+## The following objects are masked from 'package:base':
+## 
+##     date, intersect, setdiff, union
+\end{verbatim}
+
+\hypertarget{importing-raw-data-file}{%
+\subsection{Importing raw data file}\label{importing-raw-data-file}}
+
+use read excel function and remove white space
+
+Inspect the data using skim() function
+
+\begin{longtable}[]{@{}ll@{}}
+\caption{Data summary}\tabularnewline
+\toprule
+\endhead
+Name & Piped data\tabularnewline
+Number of rows & 541909\tabularnewline
+Number of columns & 8\tabularnewline
+\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_ &\tabularnewline
+Column type frequency: &\tabularnewline
+character & 4\tabularnewline
+numeric & 3\tabularnewline
+POSIXct & 1\tabularnewline
+\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_\_ &\tabularnewline
+Group variables & None\tabularnewline
+\bottomrule
+\end{longtable}
+
+\textbf{Variable type: character}
+
+\begin{longtable}[]{@{}lrrrrrrr@{}}
+\toprule
+skim\_variable & n\_missing & complete\_rate & min & max & empty &
+n\_unique & whitespace\tabularnewline
+\midrule
+\endhead
+InvoiceNo & 0 & 1 & 6 & 7 & 0 & 25900 & 0\tabularnewline
+StockCode & 0 & 1 & 1 & 12 & 0 & 4070 & 0\tabularnewline
+Description & 1454 & 1 & 1 & 35 & 0 & 4211 & 0\tabularnewline
+Country & 0 & 1 & 3 & 20 & 0 & 38 & 0\tabularnewline
+\bottomrule
+\end{longtable}
+
+\textbf{Variable type: numeric}
+
+\begin{longtable}[]{@{}lrrrrrrrrrl@{}}
+\toprule
+\begin{minipage}[b]{(\columnwidth - 10\tabcolsep) * \real{0.10}}\raggedright
+skim\_variable\strut
+\end{minipage} &
+\begin{minipage}[b]{(\columnwidth - 10\tabcolsep) * \real{0.07}}\raggedleft
+n\_missing\strut
+\end{minipage} &
+\begin{minipage}[b]{(\columnwidth - 10\tabcolsep) * \real{0.10}}\raggedleft
+complete\_rate\strut
+\end{minipage} &
+\begin{minipage}[b]{(\columnwidth - 10\tabcolsep) * \real{0.06}}\raggedleft
+mean\strut
+\end{minipage} &
+\begin{minipage}[b]{(\columnwidth - 10\tabcolsep) * \real{0.06}}\raggedleft
+sd\strut
+\end{minipage} &
+\begin{minipage}[b]{(\columnwidth - 10\tabcolsep) * \real{0.07}}\raggedleft
+p0\strut
+\end{minipage} &
+\begin{minipage}[b]{(\columnwidth - 10\tabcolsep) * \real{0.06}}\raggedleft
+p25\strut
+\end{minipage} &
+\begin{minipage}[b]{(\columnwidth - 10\tabcolsep) * \real{0.06}}\raggedleft
+p50\strut
+\end{minipage} &
+\begin{minipage}[b]{(\columnwidth - 10\tabcolsep) * \real{0.06}}\raggedleft
+p75\strut
+\end{minipage} &
+\begin{minipage}[b]{(\columnwidth - 10\tabcolsep) * \real{0.04}}\raggedleft
+p100\strut
+\end{minipage} &
+\begin{minipage}[b]{(\columnwidth - 10\tabcolsep) * \real{0.29}}\raggedright
+hist\strut
+\end{minipage}\tabularnewline
+\midrule
+\endhead
+\begin{minipage}[t]{(\columnwidth - 10\tabcolsep) * \real{0.10}}\raggedright
+Quantity\strut
+\end{minipage} &
+\begin{minipage}[t]{(\columnwidth - 10\tabcolsep) * \real{0.07}}\raggedleft
+0\strut
+\end{minipage} &
+\begin{minipage}[t]{(\columnwidth - 10\tabcolsep) * \real{0.10}}\raggedleft
+1.00\strut
+\end{minipage} &
+\begin{minipage}[t]{(\columnwidth - 10\tabcolsep) * \real{0.06}}\raggedleft
+9.55\strut
+\end{minipage} &
+\begin{minipage}[t]{(\columnwidth - 10\tabcolsep) * \real{0.06}}\raggedleft
+218.08\strut
+\end{minipage} &
+\begin{minipage}[t]{(\columnwidth - 10\tabcolsep) * \real{0.07}}\raggedleft
+-80995.00\strut
+\end{minipage} &
+\begin{minipage}[t]{(\columnwidth - 10\tabcolsep) * \real{0.06}}\raggedleft
+1.00\strut
+\end{minipage} &
+\begin{minipage}[t]{(\columnwidth - 10\tabcolsep) * \real{0.06}}\raggedleft
+3.00\strut
+\end{minipage} &
+\begin{minipage}[t]{(\columnwidth - 10\tabcolsep) * \real{0.06}}\raggedleft
+10.00\strut
+\end{minipage} &
+\begin{minipage}[t]{(\columnwidth - 10\tabcolsep) * \real{0.04}}\raggedleft
+80995\strut
+\end{minipage} &
+\begin{minipage}[t]{(\columnwidth - 10\tabcolsep) * \real{0.29}}\raggedright
+▁▁▇▁▁\strut
+\end{minipage}\tabularnewline
+\begin{minipage}[t]{(\columnwidth - 10\tabcolsep) * \real{0.10}}\raggedright
+UnitPrice\strut
+\end{minipage} &
+\begin{minipage}[t]{(\columnwidth - 10\tabcolsep) * \real{0.07}}\raggedleft
+0\strut
+\end{minipage} &
+\begin{minipage}[t]{(\columnwidth - 10\tabcolsep) * \real{0.10}}\raggedleft
+1.00\strut
+\end{minipage} &
+\begin{minipage}[t]{(\columnwidth - 10\tabcolsep) * \real{0.06}}\raggedleft
+4.61\strut
+\end{minipage} &
+\begin{minipage}[t]{(\columnwidth - 10\tabcolsep) * \real{0.06}}\raggedleft
+96.76\strut
+\end{minipage} &
+\begin{minipage}[t]{(\columnwidth - 10\tabcolsep) * \real{0.07}}\raggedleft
+-11062.06\strut
+\end{minipage} &
+\begin{minipage}[t]{(\columnwidth - 10\tabcolsep) * \real{0.06}}\raggedleft
+1.25\strut
+\end{minipage} &
+\begin{minipage}[t]{(\columnwidth - 10\tabcolsep) * \real{0.06}}\raggedleft
+2.08\strut
+\end{minipage} &
+\begin{minipage}[t]{(\columnwidth - 10\tabcolsep) * \real{0.06}}\raggedleft
+4.13\strut
+\end{minipage} &
+\begin{minipage}[t]{(\columnwidth - 10\tabcolsep) * \real{0.04}}\raggedleft
+38970\strut
+\end{minipage} &
+\begin{minipage}[t]{(\columnwidth - 10\tabcolsep) * \real{0.29}}\raggedright
+▁▇▁▁▁\strut
+\end{minipage}\tabularnewline
+\begin{minipage}[t]{(\columnwidth - 10\tabcolsep) * \real{0.10}}\raggedright
+CustomerID\strut
+\end{minipage} &
+\begin{minipage}[t]{(\columnwidth - 10\tabcolsep) * \real{0.07}}\raggedleft
+135080\strut
+\end{minipage} &
+\begin{minipage}[t]{(\columnwidth - 10\tabcolsep) * \real{0.10}}\raggedleft
+0.75\strut
+\end{minipage} &
+\begin{minipage}[t]{(\columnwidth - 10\tabcolsep) * \real{0.06}}\raggedleft
+15287.69\strut
+\end{minipage} &
+\begin{minipage}[t]{(\columnwidth - 10\tabcolsep) * \real{0.06}}\raggedleft
+1713.60\strut
+\end{minipage} &
+\begin{minipage}[t]{(\columnwidth - 10\tabcolsep) * \real{0.07}}\raggedleft
+12346.00\strut
+\end{minipage} &
+\begin{minipage}[t]{(\columnwidth - 10\tabcolsep) * \real{0.06}}\raggedleft
+13953.00\strut
+\end{minipage} &
+\begin{minipage}[t]{(\columnwidth - 10\tabcolsep) * \real{0.06}}\raggedleft
+15152.00\strut
+\end{minipage} &
+\begin{minipage}[t]{(\columnwidth - 10\tabcolsep) * \real{0.06}}\raggedleft
+16791.00\strut
+\end{minipage} &
+\begin{minipage}[t]{(\columnwidth - 10\tabcolsep) * \real{0.04}}\raggedleft
+18287\strut
+\end{minipage} &
+\begin{minipage}[t]{(\columnwidth - 10\tabcolsep) * \real{0.29}}\raggedright
+▇▇▇▇▇\strut
+\end{minipage}\tabularnewline
+\bottomrule
+\end{longtable}
+
+\textbf{Variable type: POSIXct}
+
+\begin{longtable}[]{@{}lrrlllr@{}}
+\toprule
+\begin{minipage}[b]{(\columnwidth - 6\tabcolsep) * \real{0.13}}\raggedright
+skim\_variable\strut
+\end{minipage} &
+\begin{minipage}[b]{(\columnwidth - 6\tabcolsep) * \real{0.09}}\raggedleft
+n\_missing\strut
+\end{minipage} &
+\begin{minipage}[b]{(\columnwidth - 6\tabcolsep) * \real{0.13}}\raggedleft
+complete\_rate\strut
+\end{minipage} &
+\begin{minipage}[b]{(\columnwidth - 6\tabcolsep) * \real{0.19}}\raggedright
+min\strut
+\end{minipage} &
+\begin{minipage}[b]{(\columnwidth - 6\tabcolsep) * \real{0.19}}\raggedright
+max\strut
+\end{minipage} &
+\begin{minipage}[b]{(\columnwidth - 6\tabcolsep) * \real{0.19}}\raggedright
+median\strut
+\end{minipage} &
+\begin{minipage}[b]{(\columnwidth - 6\tabcolsep) * \real{0.08}}\raggedleft
+n\_unique\strut
+\end{minipage}\tabularnewline
+\midrule
+\endhead
+\begin{minipage}[t]{(\columnwidth - 6\tabcolsep) * \real{0.13}}\raggedright
+InvoiceDate\strut
+\end{minipage} &
+\begin{minipage}[t]{(\columnwidth - 6\tabcolsep) * \real{0.09}}\raggedleft
+0\strut
+\end{minipage} &
+\begin{minipage}[t]{(\columnwidth - 6\tabcolsep) * \real{0.13}}\raggedleft
+1\strut
+\end{minipage} &
+\begin{minipage}[t]{(\columnwidth - 6\tabcolsep) * \real{0.19}}\raggedright
+2010-12-01 08:26:00\strut
+\end{minipage} &
+\begin{minipage}[t]{(\columnwidth - 6\tabcolsep) * \real{0.19}}\raggedright
+2011-12-09 12:50:00\strut
+\end{minipage} &
+\begin{minipage}[t]{(\columnwidth - 6\tabcolsep) * \real{0.19}}\raggedright
+2011-07-19 17:17:00\strut
+\end{minipage} &
+\begin{minipage}[t]{(\columnwidth - 6\tabcolsep) * \real{0.08}}\raggedleft
+23260\strut
+\end{minipage}\tabularnewline
+\bottomrule
+\end{longtable}
+
+\hypertarget{cleaning-the-data-.}{%
+\subsection{Cleaning the data \^{}.\^{}}\label{cleaning-the-data-.}}
+
+Using the filter function
+
+\begin{verbatim}
+##   .
+## 1 1
+## 2 2
+## 3 4
+\end{verbatim}
+
+Using grepl which generates TRUE/FALSE vector for each row by matching
+with a string, like Italy below
+
+\begin{verbatim}
+## .
+##  FALSE   TRUE 
+## 541106    803
+\end{verbatim}
+
+\hypertarget{using-filter-an-grepl-to-remove-rows-that-have-a-cancellation}{%
+\subsubsection{Using filter an grepl to remove rows that have a
+cancellation}\label{using-filter-an-grepl-to-remove-rows-that-have-a-cancellation}}
+
+Check how many rows have a cancellation using summarise() function
+
+\begin{verbatim}
+## # A tibble: 1 x 1
+##   Total
+##   <int>
+## 1  9288
+\end{verbatim}
+
+Now remove the rows that have a cancellation
+
+Making a table and using group\_by function
+
+\begin{verbatim}
+## `summarise()` ungrouping output (override with `.groups` argument)
+\end{verbatim}
+
+\begin{verbatim}
+## # A tibble: 2 x 2
+##   price count
+##   <chr> <int>
+## 1 1         6
+## 2 2         1
+\end{verbatim}
+
+\begin{verbatim}
+## `summarise()` ungrouping output (override with `.groups` argument)
+\end{verbatim}
+
+\begin{verbatim}
+## # A tibble: 5 x 2
+##   animal count
+##   <chr>  <int>
+## 1 Ant        1
+## 2 Bat        1
+## 3 Cow        1
+## 4 Genda      2
+## 5 Pig        2
+\end{verbatim}
+
+\begin{verbatim}
+## `summarise()` regrouping output by 'animal' (override with `.groups` argument)
+\end{verbatim}
+
+\begin{verbatim}
+## # A tibble: 6 x 3
+## # Groups:   animal [5]
+##   animal price count
+##   <chr>  <chr> <int>
+## 1 Ant    1         1
+## 2 Bat    1         1
+## 3 Cow    1         1
+## 4 Genda  1         2
+## 5 Pig    1         1
+## 6 Pig    2         1
+\end{verbatim}
+
+\begin{verbatim}
+## `summarise()` regrouping output by 'animal' (override with `.groups` argument)
+\end{verbatim}
+
+\begin{verbatim}
+## # A tibble: 6 x 3
+## # Groups:   animal [5]
+##   animal price count
+##   <chr>  <chr> <int>
+## 1 Genda  1         2
+## 2 Ant    1         1
+## 3 Bat    1         1
+## 4 Cow    1         1
+## 5 Pig    1         1
+## 6 Pig    2         1
+\end{verbatim}
+
+\begin{verbatim}
+## `summarise()` regrouping output by 'animal' (override with `.groups` argument)
+\end{verbatim}
+
+\begin{verbatim}
+## # A tibble: 6 x 3
+##   animal price count
+##   <chr>  <chr> <int>
+## 1 Genda  1         2
+## 2 Ant    1         1
+## 3 Bat    1         1
+## 4 Cow    1         1
+## 5 Pig    1         1
+## 6 Pig    2         1
+\end{verbatim}
+
+\end{document}

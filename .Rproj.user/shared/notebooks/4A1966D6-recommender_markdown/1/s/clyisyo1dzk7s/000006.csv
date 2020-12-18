@@ -1,0 +1,8 @@
+"0","retail %>% "
+"0","  filter(Quantity <= 0) %>%"
+"0","  group_by(Description, UnitPrice) %>%"
+"0","  summarise(count =n()) %>%"
+"0","  arrange(desc(count)) %>%"
+"0","  ungroup()"
+"2","`summarise()` regrouping output by 'Description' (override with `.groups` argument)
+"
